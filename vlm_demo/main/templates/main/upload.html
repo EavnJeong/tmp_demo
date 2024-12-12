@@ -19,11 +19,15 @@
                         <form id="upload-form" method="POST" enctype="multipart/form-data">
                             {% csrf_token %}
                             <div class="mb-3">
-                                <label for="image" class="form-label">Upload Image:</label>
-                                <input type="file" class="form-control" name="image" id="image" accept="image/*" required>
+                                <label for="file" class="form-label">Upload Image or Video:</label>
+                                <input type="file" class="form-control" name="file" id="file" accept="image/*,video/*" required>
                                 <!-- 미리보기 영역 -->
-                                <div class="mt-3 text-center">
-                                    <img id="preview" src="#" alt="Image preview" class="img-fluid d-none" style="max-height: 300px; border: 1px solid #ddd; border-radius: 5px;" />
+                                <div id="preview-container" class="mt-3 text-center">
+                                    <img id="image-preview" src="#" alt="Image preview" class="img-fluid d-none" style="max-height: 300px; border: 1px solid #ddd; border-radius: 5px;" />
+                                    <video id="video-preview" controls class="img-fluid d-none" style="max-height: 300px; border: 1px solid #ddd; border-radius: 5px;">
+                                        <source src="#" type="video/mp4" />
+                                        Your browser does not support the video tag.
+                                    </video>
                                 </div>
                             </div>
                             <div class="mb-3">
@@ -42,20 +46,36 @@
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // 이미지 미리보기 기능 추가
-        document.getElementById('image').addEventListener('change', function(event) {
+        // 파일 미리보기 기능 추가
+        document.getElementById('file').addEventListener('change', function(event) {
             const file = event.target.files[0];
-            const preview = document.getElementById('preview');
+            const imagePreview = document.getElementById('image-preview');
+            const videoPreview = document.getElementById('video-preview');
+            const videoSource = videoPreview.querySelector('source');
+
+            // 초기화
+            imagePreview.classList.add('d-none');
+            videoPreview.classList.add('d-none');
+            videoSource.src = '#';
+
             if (file) {
+                const fileType = file.type;
                 const reader = new FileReader();
-                reader.onload = function(e) {
-                    preview.src = e.target.result;
-                    preview.classList.remove('d-none'); // 미리보기 이미지 표시
-                };
-                reader.readAsDataURL(file);
-            } else {
-                preview.src = '#';
-                preview.classList.add('d-none'); // 미리보기 이미지 숨김
+
+                if (fileType.startsWith('image/')) {
+                    reader.onload = function(e) {
+                        imagePreview.src = e.target.result;
+                        imagePreview.classList.remove('d-none'); // 이미지 미리보기 표시
+                    };
+                    reader.readAsDataURL(file);
+                } else if (fileType.startsWith('video/')) {
+                    reader.onload = function(e) {
+                        videoSource.src = e.target.result;
+                        videoPreview.load();
+                        videoPreview.classList.remove('d-none'); // 비디오 미리보기 표시
+                    };
+                    reader.readAsDataURL(file);
+                }
             }
         });
 
@@ -65,7 +85,7 @@
             e.preventDefault();
             const formData = new FormData(form);
             const responseDiv = document.getElementById('response');
-            responseDiv.classList.add('d-none'); // Hide response div before submitting
+            responseDiv.classList.add('d-none'); // 응답 영역 숨김
 
             try {
                 const response = await fetch('/api/process/', {
@@ -75,12 +95,12 @@
 
                 const result = await response.json();
                 responseDiv.textContent = result.answer || result.error;
-                responseDiv.classList.remove('d-none'); // Show response div after receiving response
-                responseDiv.classList.add('alert-success'); // Style success messages
+                responseDiv.classList.remove('d-none'); // 응답 영역 표시
+                responseDiv.classList.add('alert-success'); // 성공 메시지 스타일
             } catch (error) {
                 responseDiv.textContent = 'An error occurred. Please try again.';
-                responseDiv.classList.remove('d-none'); // Show response div on error
-                responseDiv.classList.add('alert-danger'); // Style error messages
+                responseDiv.classList.remove('d-none'); // 에러 메시지 표시
+                responseDiv.classList.add('alert-danger'); // 에러 메시지 스타일
             }
         });
     </script>
